@@ -42,9 +42,11 @@ trait Filterable
 
         // Apply each filter to the query builder instance
 
-        foreach ($params as $field => $value) {
-            app(Resolve::class)->apply($query, $field, $value);
-        }
+        $query->where(function ($query) use ($params) {
+            foreach ($params as $field => $value) {
+                app(Resolve::class)->apply($query, $field, $value);
+            }
+        });
 
         return $query;
     }
