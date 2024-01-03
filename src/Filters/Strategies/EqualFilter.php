@@ -27,4 +27,15 @@ class EqualFilter extends Filter
             }
         };
     }
+
+    public function applyLastRelation(): Closure
+    {
+        return function ($field, $query) {
+            foreach ($this->values as $value) {
+                $query->whereHas($field, function ($query) use ($value) {
+                    $query->where($this->column, $value);
+                });
+            }
+        };
+    }
 }

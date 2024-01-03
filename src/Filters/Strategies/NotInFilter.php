@@ -27,4 +27,13 @@ class NotInFilter extends Filter
             }
         };
     }
+
+    public function applyLastRelation(): Closure
+    {
+        return function ($field, $query) {
+            $query->whereDoesntHave($field, function ($query) {
+                $query->whereIn($this->column, $this->values);
+            });
+        };
+    }
 }

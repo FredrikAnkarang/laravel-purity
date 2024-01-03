@@ -1,0 +1,1 @@
+{"version":1,"defects":[],"times":{"FilterableTest::it_can_process_a_basic_request_without_any_filter":0.015,"FilterableTest::it_can_process_a_request_without_any_matches":0.003,"FilterableTest::it_can_filter_with_a_basic_eq_operator":0.001}}

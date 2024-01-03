@@ -15,4 +15,6 @@ interface Filter
      * @return Closure
      */
     public function apply(): Closure;
+
+    public function applyLastRelation(): Closure;
 }

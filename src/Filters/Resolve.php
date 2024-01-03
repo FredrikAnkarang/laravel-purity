@@ -138,9 +138,11 @@ class Resolve
 
         $field = end($this->fields);
 
-        $callback = (new $filter($query, $field, $filters))->apply();
+        $resolvedFilter = (new $filter($query, $field, $filters));
+        $callback = $resolvedFilter->apply();
+        $lastRelationCallback = $resolvedFilter->applyLastRelation();
 
-        $this->filterRelations($query, $callback);
+        $this->filterRelations($query, $callback, $lastRelationCallback);
     }
 
     /**
@@ -149,11 +151,11 @@ class Resolve
      *
      * @return void
      */
-    private function filterRelations(Builder $query, Closure $callback): void
+    private function filterRelations(Builder $query, Closure $callback, Closure $lastRelationCallback): void
     {
         array_pop($this->fields);
 
-        $this->applyRelations($query, $callback);
+        $this->applyRelations($query, $callback, $lastRelationCallback);
     }
 
     /**
@@ -164,14 +166,18 @@ class Resolve
      *
      * @return void
      */
-    private function applyRelations(Builder $query, Closure $callback): void
+    private function applyRelations(Builder $query, Closure $callback, Closure $lastRelationCallback): void
     {
         if (empty($this->fields)) {
             // If there are no more filterable fields to resolve, apply the closure to the query builder instance
             $callback($query);
+        } else if (count($this->fields) === 1) {
+            // The last relation might require its own closure, depending on how user want to handle relation filters
+            $field = array_shift($this->fields);
+            $lastRelationCallback($field, $query);
         } else {
             // If there are still filterable fields to resolve, apply the closure to a sub-query
-            $this->relation($query, $callback);
+            $this->relation($query, $callback, $negateRelation);
         }
     }
 

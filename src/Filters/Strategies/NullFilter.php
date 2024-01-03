@@ -25,4 +25,11 @@ class NullFilter extends Filter
             $query->whereNull($this->column);
         };
     }
+
+    public function applyLastRelation(): Closure
+    {
+        return function ($field, $query) {
+            $query->whereDoesntHave($field);
+        };
+    }
 }
