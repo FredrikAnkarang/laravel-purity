@@ -8,6 +8,7 @@ use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Resolve
 {
@@ -26,15 +27,18 @@ class Resolve
     private FilterList $filterList;
 
     private Model $model;
+    
+    private array $options;
 
     /**
      * @param FilterList $filterList
      * @param Model      $model
      */
-    public function __construct(FilterList $filterList, Model $model)
+    public function __construct(FilterList $filterList, Model $model, array $options = [])
     {
         $this->filterList = $filterList;
         $this->model = $model;
+        $this->options = $options;
     }
 
     /**
@@ -46,7 +50,7 @@ class Resolve
      *
      * @return void
      */
-    public function apply(Builder $query, string $field, array|string $values): void
+    public function apply(Builder $query, string $field, array|string $values, array $filterOptions = []): void
     {
         if (!$this->safe(fn () => $this->validate([$field => $values]))) {
             return;
@@ -54,7 +58,7 @@ class Resolve
 
         $this->filter($query, $field, $values);
     }
-
+    
     /**
      * run functions with or without exception.
      *
@@ -138,11 +142,25 @@ class Resolve
 
         $field = end($this->fields);
 
-        $resolvedFilter = (new $filter($query, $field, $filters));
-        $callback = $resolvedFilter->apply();
-        $lastRelationCallback = $resolvedFilter->applyLastRelation();
+        $customFilterClassName = $this->getCustomFilterClassName($field);
+        $customFilterMethodName = ltrim($operator, '$');
+        if ($field && class_exists($customFilterClassName) && method_exists($customFilterClassName, $customFilterMethodName)) {
+            // If user has defined a custom filter for this field, use it instead of the default one
+            $callback = (new $customFilterClassName($query, $filters, $this->options))->{$customFilterMethodName}();
+            $lastRelationCallback = null;
+        } else {
+            $resolvedFilter = (new $filter($query, $field, $filters, $this->options));
+            $callback = $resolvedFilter->apply();
+            $lastRelationCallback = $resolvedFilter->applyLastRelation();
+        }
 
         $this->filterRelations($query, $callback, $lastRelationCallback);
+    }
+
+    private function getCustomFilterClassName($field)
+    {
+        $reflection = new \ReflectionClass($this->model);
+        return 'App\\Filters\\Model\\'. $reflection->getShortName() . '\\' . Str::studly($field). 'Filter';
     }
 
     /**
@@ -151,7 +169,7 @@ class Resolve
      *
      * @return void
      */
-    private function filterRelations(Builder $query, Closure $callback, Closure $lastRelationCallback): void
+    private function filterRelations(Builder $query, Closure $callback, Closure|null $lastRelationCallback): void
     {
         array_pop($this->fields);
 
@@ -166,12 +184,12 @@ class Resolve
      *
      * @return void
      */
-    private function applyRelations(Builder $query, Closure $callback, Closure $lastRelationCallback): void
+    private function applyRelations(Builder $query, Closure $callback, Closure|null $lastRelationCallback): void
     {
         if (empty($this->fields)) {
             // If there are no more filterable fields to resolve, apply the closure to the query builder instance
             $callback($query);
-        } else if (count($this->fields) === 1) {
+        } else if (count($this->fields) === 1 && $lastRelationCallback !== null) {
             // The last relation might require its own closure, depending on how user want to handle relation filters
             $field = array_shift($this->fields);
             $lastRelationCallback($field, $query);

@@ -31,9 +31,9 @@ trait Filterable
      *
      * @return Builder
      */
-    public function scopeFilter(Builder $query, array|null $params = null): Builder
+    public function scopeFilter(Builder $query, array|null $params = null, array $filterOptions = []): Builder
     {
-        $this->bootFilter();
+        $this->bootFilter($filterOptions);
 
         if (!isset($params)) {
             // Retrieve the filters from the request query
@@ -56,13 +56,14 @@ trait Filterable
      *
      * @return void
      */
-    private function bootFilter(): void
+    private function bootFilter(array $filterOptions): void
     {
         app()->singleton(FilterList::class, function () {
             return (new FilterList())->only($this->getFilters());
         });
 
         app()->when(Resolve::class)->needs(Model::class)->give(fn () => $this);
+        app()->when(Resolve::class)->needs('$options')->give($filterOptions);
     }
 
     /**

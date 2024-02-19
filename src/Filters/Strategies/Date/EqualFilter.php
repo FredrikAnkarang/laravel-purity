@@ -1,18 +1,13 @@
 <?php
 
-namespace Abbasudo\Purity\Filters\Strategies;
+namespace Abbasudo\Purity\Filters\Strategies\Date;
 
 use Abbasudo\Purity\Filters\Filter;
 use Closure;
 
 class EqualFilter extends Filter
 {
-    /**
-     * Operator string to detect in the query params.
-     *
-     * @var string
-     */
-    protected static string $operator = '$eq';
+    protected static string $operator = '$dateEq';
 
     /**
      * Apply filter logic to $query.
@@ -23,7 +18,7 @@ class EqualFilter extends Filter
     {
         return function ($query) {
             foreach ($this->values as $value) {
-                $query->where($this->column, $value);
+                $query->whereDate($this->column, $value);
             }
         };
     }
