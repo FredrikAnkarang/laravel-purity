@@ -6,7 +6,7 @@ use Abbasudo\Purity\Filters\Filter;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 
-class RelLessThanFilter extends LessThanFilter
+class RelLessThanFilter extends Filter
 {
     /**
      * Operator string to detect in the query params.
@@ -15,13 +15,12 @@ class RelLessThanFilter extends LessThanFilter
      */
     protected static string $operator = '$relLt';
 
-    public function __construct(Builder $query, string $column, array $values, array $options = [])
+    public function apply(): Closure
     {
-        parent::__construct(
-            $query,
-            $column,
-            array_map(fn ($value) => now()->addDays($value)->toDateString(), $values),
-            $options
-        );
+        return function ($query) {
+            foreach ($this->values as $value) {
+                $query->where($this->column, '<', now()->addDays($value)->toDateTimeString());
+            }
+        };
     }
 }
